@@ -1,6 +1,6 @@
 import streamlit as st
 from youtuber import fetch_youtube_captions
-from agent import process_and_cluster_captions, generate_summary, answer_question
+from agent import process_and_cluster_captions, generate_summary, answer_question, reset_globals
 
 def user_query(question, openai_api_key):
     """Process and display the query response."""
@@ -54,6 +54,7 @@ with st.sidebar:
     if st.button("🚀Run it"):
         if openai_api_key:
             if youtube_url and 'processed_data' not in st.session_state:
+                reset_globals()
                 with st.spinner('👩‍🍳 GPT is cooking up your podcast... hang tight for a few secs🍳'):
                     captions = fetch_youtube_captions(youtube_url)
                     if captions:

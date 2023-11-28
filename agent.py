@@ -18,6 +18,11 @@ logging.basicConfig(level=logging.INFO)
 global_faiss_db = None
 global_documents = None
 
+# Function to reset global variables
+def reset_globals():
+    global global_faiss_db, global_documents
+    global_faiss_db = None
+    global_documents = None
 
 def init_faiss_db(openai_api_key):
     global global_faiss_db, global_documents
