@@ -102,7 +102,7 @@ def answer_question(question, openai_api_key):
     qa_chain = RetrievalQA.from_chain_type(
         llm=llm4, 
         chain_type="stuff", 
-        retriever=global_faiss_db.as_retriever(search_type="similarity", search_kwargs={"k":8}),
+        retriever=global_faiss_db.as_retriever(search_type="similarity", search_kwargs={"k":7}),
         return_source_documents=True,
         chain_type_kwargs={"prompt": QA_CHAIN_PROMPT}
     )
