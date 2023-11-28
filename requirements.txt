@@ -80,3 +80,4 @@ validators==0.22.0
 yarl==1.9.3
 youtube-transcript-api==0.6.1
 zipp==3.17.0
+simsimd==3.5.5
