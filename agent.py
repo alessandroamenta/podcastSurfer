@@ -94,7 +94,7 @@ def answer_question(question, openai_api_key):
     if global_faiss_db is None:
         init_faiss_db(openai_api_key) 
     logging.info(f"Answering question: {question}")
-    template = """Use the following pieces of context to answer the question at the end. If you don't know the answer, just say that you don't know, don't try to make up an answer. Use three sentences maximum. Keep the answer as concise as possible. 
+    template = """Use the following pieces of context to answer the question at the end. If you don't know the answer, just say that you don't know, don't try to make up an answer. Keep the answer concise. 
     {context}
     Question: {question}
     Helpful Answer:"""
@@ -102,7 +102,7 @@ def answer_question(question, openai_api_key):
     qa_chain = RetrievalQA.from_chain_type(
         llm=llm4, 
         chain_type="stuff", 
-        retriever=global_faiss_db.as_retriever(search_type="mmr", search_kwargs={"k":8}),
+        retriever=global_faiss_db.as_retriever(search_type="similarity", search_kwargs={"k":8}),
         return_source_documents=True,
         chain_type_kwargs={"prompt": QA_CHAIN_PROMPT}
     )
