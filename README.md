@@ -1,7 +1,7 @@
 # GPT Podcast Surfer 🌊🏄🏼
 
 ## Overview
-GPT Podcast Surfer is an innovative application designed to enhance your podcast listening experience. Leveraging the power of OpenAI's GPT models, this tool fetches captions from YouTube podcasts, generates concise summaries, and enables interactive question-answering based on the podcast content.
+GPT Podcast Surfer is an simple app designed to enhance your podcast listening experience. Leveraging the power of OpenAI's GPT models, this tool fetches captions from YouTube podcasts, generates concise summaries, and enables interactive question-answering based on the content.
 
 ## Features
 - 📺 **YouTube Integration**: Fetch and process captions directly from YouTube videos.
