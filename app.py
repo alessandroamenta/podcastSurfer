@@ -30,7 +30,7 @@ if 'conversation' not in st.session_state:
 
 # Sidebar for input and operations
 with st.sidebar:
-    st.image("image.png") 
+    st.image("img.png") 
     st.title("GPT Podcast Surfer🌊🏄🏼")
 
     # Expandable Instructions
