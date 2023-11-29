@@ -1,6 +1,6 @@
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
+from langchain.vectorstores import Chroma
 from sklearn.cluster import KMeans
 from langchain.chat_models import ChatOpenAI
 from langchain.chains.summarize import load_summarize_chain
@@ -10,28 +10,26 @@ from langchain.chains import RetrievalQA
 import logging
 from langchain.prompts import PromptTemplate
 
-
 logging.basicConfig(level=logging.INFO) 
-
-
 # Initialize global variables
-global_faiss_db = None
+global_chromadb = None
 global_documents = None
+global_short_documents = None 
 
 # Function to reset global variables
 def reset_globals():
-    global global_faiss_db, global_documents
-    global_faiss_db = None
+    global global_chromadb, global_documents, global_short_documents
+    global_chromadb = None
     global_documents = None
+    global_short_documents = None 
 
-def init_faiss_db(openai_api_key):
-    global global_faiss_db, global_documents
-    if global_faiss_db is None and global_documents is not None:
-        embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
-        global_faiss_db = FAISS.from_documents(global_documents, embeddings)
+def init_chromadb(openai_api_key):
+    global global_chromadb, global_short_documents
+    if global_chromadb is None and global_short_documents is not None:
+        global_chromadb = Chroma.from_documents(documents=global_short_documents, embedding=OpenAIEmbeddings(openai_api_key=openai_api_key))
 
-def process_and_cluster_captions(captions, openai_api_key, num_clusters=17):
-    global global_documents
+def process_and_cluster_captions(captions, openai_api_key, num_clusters=12):
+    global global_documents, global_short_documents 
     logging.info("Processing and clustering captions")
     
     # Log the first 500 characters of the captions to check their format
@@ -42,23 +40,26 @@ def process_and_cluster_captions(captions, openai_api_key, num_clusters=17):
     if not isinstance(caption_content, str):
         logging.error("Captions are not in the expected string format")
         return []
-
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=350, chunk_overlap=0, separators=["\n\n", "\n", " ", ""])
-    split_docs = text_splitter.create_documents([caption_content])
-    embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
-    vectors = embeddings.embed_documents([x.page_content for x in split_docs])
     
-    # Log the first few hundred characters of the embeddings
-    logging.info(f"Embeddings generated (preview): {str(vectors)[:5000]}")
+    # Create longer chunks for summary
+    summary_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=["\n\n", "\n", " ", ""])
+    summary_docs = summary_splitter.create_documents([caption_content])
 
-    kmeans = KMeans(n_clusters=num_clusters, random_state=42).fit(vectors)
-    closest_indices = [np.argmin(np.linalg.norm(vectors - center, axis=1)) for center in kmeans.cluster_centers_]
-    representative_docs = [split_docs[i] for i in closest_indices]
+    # Create shorter chunks for QA
+    qa_splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=0, separators=["\n\n", "\n", " ", ""])
+    qa_docs = qa_splitter.create_documents([caption_content])
     
-    # Log representative_docs with a limit on the output length
-    logging.info(f"Clustering completed. Representative documents (preview): {str(representative_docs)[:500]}")
-    global_documents = split_docs
-    init_faiss_db(openai_api_key) 
+    # Process for summary
+    summary_embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key).embed_documents([x.page_content for x in summary_docs])
+    kmeans = KMeans(n_clusters=num_clusters, random_state=42).fit(summary_embeddings)
+    closest_indices = [np.argmin(np.linalg.norm(summary_embeddings - center, axis=1)) for center in kmeans.cluster_centers_]
+    representative_docs = [summary_docs[i] for i in closest_indices]
+
+    # Store documents globally
+    global_documents = summary_docs  # For summary
+    global_short_documents = qa_docs  # For QA
+
+    init_chromadb(openai_api_key)  # Initialize database with longer chunks
     return representative_docs
 
 
@@ -89,25 +90,27 @@ def generate_summary(representative_docs, openai_api_key):
 
 
 def answer_question(question, openai_api_key):
-    llm4 = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0.2, openai_api_key=openai_api_key, max_tokens=350)
-    global global_faiss_db
-    if global_faiss_db is None:
-        init_faiss_db(openai_api_key) 
+    llm4 = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, openai_api_key=openai_api_key)
+    global global_chromadb, global_short_documents
+
+    if global_chromadb is None and global_short_documents is not None:
+        init_chromadb(openai_api_key, documents=global_short_documents)
+
     logging.info(f"Answering question: {question}")
-    template = """Use the following pieces of context to answer the question at the end. If you don't know the answer, just say that you don't know, don't try to make up an answer. Keep the answer concise. 
-    {context}
-    Question: {question}
-    Helpful Answer:"""
+    template = """You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
+    Question: {question} 
+    Context: {context} 
+    Answer:"""
     QA_CHAIN_PROMPT = PromptTemplate.from_template(template)
     qa_chain = RetrievalQA.from_chain_type(
         llm=llm4, 
         chain_type="stuff", 
-        retriever=global_faiss_db.as_retriever(search_type="similarity", search_kwargs={"k":7}),
+        retriever=global_chromadb.as_retriever(search_type="mmr", search_kwargs={"k":12}),
         return_source_documents=True,
         chain_type_kwargs={"prompt": QA_CHAIN_PROMPT}
     )
-    response = qa_chain({"query": question})
+    response = qa_chain({"query": question}) 
     logging.info(f"this is the result: {response}")
-    output = response['result']
-    
+    output = response['result']    
+
     return output

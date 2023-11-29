@@ -2,6 +2,7 @@ import streamlit as st
 from youtuber import fetch_youtube_captions
 from agent import process_and_cluster_captions, generate_summary, answer_question, reset_globals
 
+
 def user_query(question, openai_api_key):
     """Process and display the query response."""
     # Add the user's question to the conversation
@@ -72,11 +73,13 @@ with st.sidebar:
         else:
             st.warning("Please add the OpenAI API key first.")
 
+
 # Main app logic
 for message, css_class in st.session_state.conversation:
     role = "assistant" if css_class in ["grimoire-message", "summary-message", "suggestion-message"] else "user"
     with st.chat_message(role):
         st.markdown(message)
+
 
 # Chat input field
 if prompt := st.chat_input("Ask me anything about the podcast..."):
