@@ -63,9 +63,9 @@ def process_and_cluster_captions(captions, openai_api_key, num_clusters=12):
     return representative_docs
 
 
-def generate_summary(representative_docs, openai_api_key):
+def generate_summary(representative_docs, openai_api_key, model_name):
     logging.info("Generating summary")
-    llm4 = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0.2, openai_api_key=openai_api_key)
+    llm4 = ChatOpenAI(model_name=model_name, temperature=0.2, openai_api_key=openai_api_key)
 
     # Concatenate texts for summary
     summary_text = "\n".join([doc.page_content for doc in representative_docs])
@@ -89,8 +89,8 @@ def generate_summary(representative_docs, openai_api_key):
     return summary
 
 
-def answer_question(question, openai_api_key):
-    llm4 = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, openai_api_key=openai_api_key)
+def answer_question(question, openai_api_key, model_name):
+    llm4 = ChatOpenAI(model_name=model_name, temperature=0, openai_api_key=openai_api_key)
     global global_chromadb, global_short_documents
 
     if global_chromadb is None and global_short_documents is not None:

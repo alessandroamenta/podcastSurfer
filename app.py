@@ -3,7 +3,7 @@ from youtuber import fetch_youtube_captions
 from agent import process_and_cluster_captions, generate_summary, answer_question, reset_globals
 
 
-def user_query(question, openai_api_key):
+def user_query(question, openai_api_key, model_name):
     """Process and display the query response."""
     # Add the user's question to the conversation
     st.session_state.conversation.append((f"{question}", "user-message"))
@@ -11,7 +11,7 @@ def user_query(question, openai_api_key):
     # Check if this query has been processed before
     if question not in st.session_state.processed_questions:
         # Process the query
-        answer = answer_question(question, openai_api_key)
+        answer = answer_question(question, openai_api_key, model_name)
         if isinstance(answer, str):
             st.session_state.conversation.append((f"{answer}", "grimoire-message"))
         else:
@@ -43,6 +43,19 @@ with st.sidebar:
             - 🕵️‍♂️ **Ask questions in the chat.**
         """)
 
+    # Model selection in the sidebar
+    model_choice = st.sidebar.selectbox("Choose Model:", 
+                                        ("GPT-4 Turbo", "GPT-3.5 Turbo"), 
+                                        index=0)  # Default to GPT-4 Turbo
+
+    # Map friendly names to actual model names
+    model_name_mapping = {
+        "GPT-4 Turbo": "gpt-4-1106-preview",
+        "GPT-3.5 Turbo": "gpt-3.5-turbo"
+    }
+
+    selected_model = model_name_mapping[model_choice]
+
     # Input for OpenAI API Key
     openai_api_key = st.text_input("Enter your OpenAI API Key:", type="password")
 
@@ -61,7 +74,7 @@ with st.sidebar:
                     captions = fetch_youtube_captions(youtube_url)
                     if captions:
                         representative_docs = process_and_cluster_captions(captions, st.session_state['openai_api_key'])
-                        summary = generate_summary(representative_docs, st.session_state['openai_api_key'])
+                        summary = generate_summary(representative_docs, st.session_state['openai_api_key'], selected_model)
                         st.session_state.processed_data = (representative_docs, summary)
                         if 'summary_displayed' not in st.session_state:
                             st.session_state.conversation.append((f"Here's a rundown: {summary}", "summary-message"))
