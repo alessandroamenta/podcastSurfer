@@ -55,6 +55,8 @@ with st.sidebar:
     }
 
     selected_model = model_name_mapping[model_choice]
+    st.session_state['selected_model'] = model_name_mapping[model_choice]
+
 
     # Input for OpenAI API Key
     openai_api_key = st.text_input("Enter your OpenAI API Key:", type="password")
@@ -77,7 +79,7 @@ with st.sidebar:
                         summary = generate_summary(representative_docs, st.session_state['openai_api_key'], selected_model)
                         st.session_state.processed_data = (representative_docs, summary)
                         if 'summary_displayed' not in st.session_state:
-                            st.session_state.conversation.append((f"Here's a rundown: {summary}", "summary-message"))
+                            st.session_state.conversation.append((f"Here's what the convo is about: {summary}", "summary-message"))
                             guiding_message = "Feel free to ask me anything else about it! :)"
                             st.session_state.conversation.append((guiding_message, "grimoire-message"))
                             st.session_state['summary_displayed'] = True
@@ -96,4 +98,4 @@ for message, css_class in st.session_state.conversation:
 
 # Chat input field
 if prompt := st.chat_input("Ask me anything about the podcast..."):
-    user_query(prompt, st.session_state.get('openai_api_key', ''))
+    user_query(prompt, st.session_state.get('openai_api_key', ''), st.session_state.get('selected_model', 'gpt-4-1106-preview'))

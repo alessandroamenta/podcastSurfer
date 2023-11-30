@@ -6,9 +6,11 @@ from langchain.chat_models import ChatOpenAI
 from langchain.chains.summarize import load_summarize_chain
 from langchain.schema import Document
 import numpy as np
-from langchain.chains import RetrievalQA
+from langchain.chains import ConversationalRetrievalChain
 import logging
 from langchain.prompts import PromptTemplate
+from langchain.memory import ConversationBufferMemory
+
 
 logging.basicConfig(level=logging.INFO) 
 # Initialize global variables
@@ -16,12 +18,24 @@ global_chromadb = None
 global_documents = None
 global_short_documents = None 
 
+# Initialize the memory outside the function so it persists across different calls
+conversation_memory = ConversationBufferMemory(
+    memory_key="chat_history",
+    max_len=50,
+    input_key="question",
+    output_key="answer",
+    return_messages=True,
+)
+
 # Function to reset global variables
 def reset_globals():
     global global_chromadb, global_documents, global_short_documents
     global_chromadb = None
     global_documents = None
-    global_short_documents = None 
+    global_short_documents = None
+    # Reset the conversation memory
+    if conversation_memory:
+        conversation_memory.clear()
 
 def init_chromadb(openai_api_key):
     global global_chromadb, global_short_documents
@@ -95,22 +109,28 @@ def answer_question(question, openai_api_key, model_name):
 
     if global_chromadb is None and global_short_documents is not None:
         init_chromadb(openai_api_key, documents=global_short_documents)
-
+    
     logging.info(f"Answering question: {question}")
-    template = """You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
+    chatTemplate = """
+    You are an AI assistant tasked with answering questions based on context from a podcast conversation. Use the provided context and relevant chat messages to answer. If unsure, say so. Keep your answer to three sentences or less, focusing on the most relevant information.
+    Chat Messages (if relevant): {chat_history}
     Question: {question} 
-    Context: {context} 
+    Context from Podcast: {context} 
     Answer:"""
-    QA_CHAIN_PROMPT = PromptTemplate.from_template(template)
-    qa_chain = RetrievalQA.from_chain_type(
+    QA_CHAIN_PROMPT = PromptTemplate(input_variables=["context", "question", "chat_history"],template=chatTemplate)
+    qa_chain = ConversationalRetrievalChain.from_llm(
         llm=llm4, 
         chain_type="stuff", 
         retriever=global_chromadb.as_retriever(search_type="mmr", search_kwargs={"k":12}),
-        return_source_documents=True,
-        chain_type_kwargs={"prompt": QA_CHAIN_PROMPT}
+        memory=conversation_memory,
+        #return_source_documents=True,
+        combine_docs_chain_kwargs={'prompt': QA_CHAIN_PROMPT},
     )
-    response = qa_chain({"query": question}) 
+    # Log the current chat history
+    current_chat_history = conversation_memory.load_memory_variables({})
+    logging.info(f"Current Chat History: {current_chat_history}")
+    response = qa_chain({"question": question}) 
     logging.info(f"this is the result: {response}")
-    output = response['result']    
+    output = response['answer']    
 
     return output
