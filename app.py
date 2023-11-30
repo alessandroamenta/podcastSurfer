@@ -3,8 +3,7 @@ from youtuber import fetch_youtube_captions
 from agent import process_and_cluster_captions, generate_summary, answer_question, reset_globals
 
 # Set Streamlit page configuration with custom tab title
-st.set_page_config(page_title="GPTpod", page_icon="🏄", layout="wide")
-st.header("GPTpod🏄")
+st.set_page_config(page_title="🏄GPTpod", page_icon="🏄", layout="wide")
 
 def user_query(question, openai_api_key, model_name):
     """Process and display the query response."""
