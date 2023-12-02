@@ -81,7 +81,7 @@ with st.sidebar:
                         summary = generate_summary(representative_docs, st.session_state['openai_api_key'], selected_model)
                         st.session_state.processed_data = (representative_docs, summary)
                         if 'summary_displayed' not in st.session_state:
-                            st.session_state.conversation.append((f"Here's what the convo is about: {summary}", "summary-message"))
+                            st.session_state.conversation.append((f"Here's a rundown of the conversation: {summary}", "summary-message"))
                             guiding_message = "Feel free to ask me anything else about it! :)"
                             st.session_state.conversation.append((guiding_message, "grimoire-message"))
                             st.session_state['summary_displayed'] = True
